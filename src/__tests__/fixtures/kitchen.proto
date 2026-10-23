@@ -1,0 +1,67 @@
+syntax = "proto3";
+package kitchen;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+enum Color {
+  COLOR_UNSPECIFIED = 0;
+  RED = 1;
+  GREEN = 2;
+}
+
+// Everything proto3 can express.
+message Kitchen {
+  message Inner {
+    string name = 1;
+  }
+  enum Kind {
+    KIND_A = 0;
+    KIND_B = 1;
+  }
+
+  int32 i32 = 1;
+  int64 i64 = 2;
+  uint64 u64 = 3;
+  sint32 s32 = 4;
+  sint64 s64 = 5;
+  fixed32 f32 = 6;
+  fixed64 f64 = 7;
+  sfixed32 sf32 = 8;
+  sfixed64 sf64 = 9;
+  float flt = 10;
+  double dbl = 11;
+  bool flag = 12;
+  string text = 13;
+  bytes blob = 14;
+  Color color = 15;
+  Kind kind = 16;
+  Inner inner = 17;
+  repeated Inner inners = 18;
+  repeated int32 numbers = 19;
+  repeated string tags = 20;
+  map<string, Inner> by_name = 21;
+  map<int64, string> by_id = 22;
+  map<bool, Color> flags = 23;
+  oneof pick {
+    string a = 24;
+    int32 b = 25;
+    Inner c = 26;
+  }
+  optional int32 maybe = 27;
+  google.protobuf.Timestamp when = 28;
+  google.protobuf.Duration span = 29;
+  google.protobuf.Any any = 30;
+  google.protobuf.Struct meta = 31;
+  google.protobuf.FieldMask mask = 32;
+  google.protobuf.Int64Value wrapped = 33;
+}
+
+service Greeter {
+  rpc Say(Kitchen) returns (Kitchen.Inner);
+  rpc Chat(stream Kitchen) returns (stream Kitchen);
+}

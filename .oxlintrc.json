@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "rules": {
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/ban-ts-comment": [
+      "error",
+      { "ts-ignore": true, "ts-nocheck": true, "ts-expect-error": true }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["**/__tests__/**"],
+      "rules": {
+        "typescript/ban-ts-comment": [
+          "error",
+          { "ts-ignore": true, "ts-nocheck": true, "ts-expect-error": "allow-with-description" }
+        ]
+      }
+    }
+  ],
+  "ignorePatterns": ["dist", "protos"]
+}

@@ -1,0 +1,74 @@
+{
+  "name": "@jzszdznzzl/protobuf",
+  "version": "0.0.1",
+  "description": "Protobuf (proto2, proto3, editions) to TypeScript/JavaScript code generator and runtime, usable as a library or CLI",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "pb": "./dist/cli.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./runtime": {
+      "types": "./dist/runtime/index.d.mts",
+      "default": "./dist/runtime/index.mjs"
+    },
+    "./protos/*": "./protos/*"
+  },
+  "files": [
+    "dist",
+    "protos",
+    "LICENSE"
+  ],
+  "scripts": {
+    "lint": "oxlint",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "build": "tsdown",
+    "test": "node --test \"src/**/__tests__/*.test.ts\"",
+    "update:protos": "node ./scripts/update-protos.ts",
+    "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+  },
+  "keywords": [
+    "protobuf",
+    "proto2",
+    "proto3",
+    "typescript"
+  ],
+  "dependencies": {
+    "oxc-transform": "^0.155.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "24",
+    "oxlint": "1.89.0",
+    "prettier": "3.9.10",
+    "tsdown": "0.23.1",
+    "typescript": "7"
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=12"
+  },
+  "packageManager": "pnpm@12.14.0",
+  "author": {
+    "name": "jzszdznzzl",
+    "url": "https://github.com/jzszdznzzl",
+    "email": "jxsxdxnxxl@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jzszdznzzl/protobuf.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jzszdznzzl/protobuf/issues"
+  },
+  "homepage": "https://github.com/jzszdznzzl/protobuf#readme",
+  "publishConfig": {
+    "access": "public"
+  }
+}

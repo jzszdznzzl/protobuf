@@ -1,0 +1,26 @@
+syntax = "proto2";
+package legacy;
+
+message Legacy {
+  enum Mode {
+    SLOW = 0;
+    FAST = 1;
+  }
+
+  required int32 id = 1;
+  optional string name = 2 [default = "anon"];
+  optional Mode mode = 3 [default = FAST];
+  repeated Mode modes = 4;
+  repeated int32 plain = 5;
+  repeated int32 packed = 6 [packed = true];
+  optional group Extra = 7 {
+    optional int32 z = 1;
+  }
+
+  extensions 100 to 199;
+}
+
+extend Legacy {
+  optional int32 weight = 100;
+  repeated string notes = 101;
+}
