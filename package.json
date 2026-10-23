@@ -28,6 +28,7 @@
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "build": "tsdown",
+    "prepare": "tsdown",
     "test": "node --test \"src/**/__tests__/*.test.ts\"",
     "update:protos": "node ./scripts/update-protos.ts",
     "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
