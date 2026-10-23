@@ -1,8 +1,9 @@
 /**
- * Downloads the official Google .proto files into `./protos/` from pinned revisions:
- *   google/protobuf/*            protocolbuffers/protobuf
- *   google/type/*, google/api/*  googleapis/googleapis (and any file they import)
- * Usage: node ./scripts/update-protos.ts
+ * Downloads the official Google .proto files into `./protos/` from the latest upstream revisions:
+ *   google/protobuf/*            protocolbuffers/protobuf (latest release tag)
+ *   google/type/*, google/api/*  googleapis/googleapis (latest commit, pinned by SHA)
+ * The revisions that were used are recorded in `protos/README.md`.
+ * Usage: node ./scripts/update-protos.ts   (set GITHUB_TOKEN to avoid API rate limits)
  */
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -15,8 +16,6 @@ interface ProtoSource {
   prefix: string;
 }
 
-const PROTOBUF_REF = 'v36.2';
-const GOOGLEAPIS_REF = 'ba591f1d7fdedc610639425448756cd8a64adc0f';
 const PROTOBUF_FILES = [
   'any',
   'api',
@@ -32,16 +31,9 @@ const PROTOBUF_FILES = [
   'compiler/plugin',
 ].map((name) => `google/protobuf/${name}.proto`);
 
-const PROTOBUF_SOURCE: ProtoSource = {
-  repo: 'protocolbuffers/protobuf',
-  ref: PROTOBUF_REF,
-  prefix: 'src/',
-};
-const GOOGLEAPIS_SOURCE: ProtoSource = {
-  repo: 'googleapis/googleapis',
-  ref: GOOGLEAPIS_REF,
-  prefix: '',
-};
+const Environment = z.object({ GITHUB_TOKEN: z.string().min(1).optional() });
+const Release = z.object({ tag_name: z.string().min(1) });
+const Commit = z.object({ sha: z.string().min(1) });
 
 const IMPORT_PATTERN = /^import\s+(?:public\s+|weak\s+|option\s+)?"([^"]+)";/gm;
 
@@ -49,8 +41,12 @@ const DirectoryListing = z.array(z.object({ type: z.string(), name: z.string() }
 
 const outDir = path.join(import.meta.dirname, '..', 'protos');
 
+const { GITHUB_TOKEN } = Environment.parse(process.env);
+
 const get = async (url: string): Promise<Response> => {
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: GITHUB_TOKEN ? { Authorization: `Bearer ${GITHUB_TOKEN}` } : {},
+  });
   if (!response.ok) {
     throw new Error(`fetch failed with status ${response.status} for URL: ${url}`);
   }
@@ -76,6 +72,23 @@ const fetchProto = async (logicalName: string): Promise<string> => {
 
 const fetchLicense = async (source: ProtoSource): Promise<string> =>
   (await get(`https://raw.githubusercontent.com/${source.repo}/${source.ref}/LICENSE`)).text();
+
+const PROTOBUF_SOURCE: ProtoSource = {
+  repo: 'protocolbuffers/protobuf',
+  ref: Release.parse(
+    await (
+      await get('https://api.github.com/repos/protocolbuffers/protobuf/releases/latest')
+    ).json(),
+  ).tag_name,
+  prefix: 'src/',
+};
+const GOOGLEAPIS_SOURCE: ProtoSource = {
+  repo: 'googleapis/googleapis',
+  ref: Commit.parse(
+    await (await get('https://api.github.com/repos/googleapis/googleapis/commits/master')).json(),
+  ).sha,
+  prefix: '',
+};
 
 const wanted = [
   ...PROTOBUF_FILES,
@@ -108,8 +121,8 @@ writeFileSync(
   path.join(outDir, 'README.md'),
   `Official Google .proto files, downloaded with \`scripts/update-protos.ts\`.
 
-- google/protobuf/*: protocolbuffers/protobuf @ ${PROTOBUF_REF} (BSD-3-Clause)
-- google/type/*, google/api/* (and their imports): googleapis/googleapis @ ${GOOGLEAPIS_REF} (Apache-2.0)
+- google/protobuf/*: protocolbuffers/protobuf @ ${PROTOBUF_SOURCE.ref} (BSD-3-Clause)
+- google/type/*, google/api/* (and their imports): googleapis/googleapis @ ${GOOGLEAPIS_SOURCE.ref} (Apache-2.0)
 
 Do not edit by hand: rerun the script instead.
 `,
