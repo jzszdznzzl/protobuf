@@ -26,7 +26,7 @@ Writing versions in this document is not enough; they must be enforced by the to
 ```json
 {
   "type": "module",
-  "packageManager": "pnpm@12.0.0",
+  "packageManager": "pnpm@12.14.0",
   "engines": {
     "node": ">=24",
     "pnpm": ">=12"
@@ -83,12 +83,13 @@ trim_trailing_whitespace = true
 
 **`.oxlintrc.json`**
 
-Enforces the type-safety rules from section 3. `@ts-expect-error` is allowed only in tests, with a description.
+Enforces the type-safety and control-flow rules from section 3. `@ts-expect-error` is allowed only in tests, with a description.
 
 ```json
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "rules": {
+    "curly": ["error", "all"],
     "typescript/no-explicit-any": "error",
     "typescript/no-non-null-assertion": "error",
     "typescript/ban-ts-comment": [
@@ -145,7 +146,7 @@ The first block is mandatory in every project. The second block shows typical va
 
     // --- Project-dependent: adjust per project ---
     "target": "ESNext",
-    "lib": ["ESNext"], // Add "DOM" for browser code.
+    "lib": ["ESNext"],
     "types": ["node"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
@@ -162,7 +163,6 @@ The first block is mandatory in every project. The second block shows typical va
 ### Size
 
 - **Small project:** a script or tool that fits in one readable file or a few. Use a simple monolith (`index.ts` or `main.ts`, `config.ts`, `utils.ts`). Do not split it into many files preemptively.
-- **Large project:** depends on external services, databases, several repositories or multiple business domains. From day one, organize it by domain folders inside `src/` (`src/users/`, `src/billing/`) or as a pnpm workspace monorepo.
 - **In between:** start small. Split a file when it becomes hard to navigate or mixes unrelated responsibilities.
 
 ### Naming
@@ -217,12 +217,12 @@ Why: there is a single source of truth, so if a database value changes, it chang
 
 Why not `enum`: enums generate runtime code (Node.js cannot strip them) and string enums are nominal, so a plain `'admin'` coming from a database or API is rejected without a cast. `Object.freeze` adds runtime immutability; `as const` alone is acceptable in internal application code.
 
-This rule does **not** apply to self-evident values such as `0`, `1`, `-1`, `''` or array indexes. Configuration numbers (timeouts, limits, ports) go in `SCREAMING_SNAKE_CASE` constants.
+This rule does **not** apply to self-evident values such as `0`, `1`, `-1`, `''` or array indexes. Configuration numbers (timeouts, limits, ports) go in `SCREAMING_SNAKE_CASE` constants or environment variables.
 
 ### Validation with zod
 
 - Schemas are `PascalCase`, and their inferred type uses the same name.
-- Validate at the boundaries: CLI arguments, file contents and external API responses. Inside the application, trust the types.
+- Validate at the boundaries: CLI arguments, file contents, environment variables and external API responses. Inside the application, trust the types.
 - Reuse domain objects instead of duplicating values: `z.enum(Role)`.
 - When a JSON Schema is needed, generate it with `z.toJSONSchema(Schema)` instead of writing it by hand.
 
@@ -246,7 +246,7 @@ Types are only useful if they are true. The constructs below tell the compiler "
 
 - **`as` is forbidden**, except `as const`. To check that a value matches a type without forcing it, use `satisfies`. In tests, `as` is allowed only to build partial mocks.
 - **`any` is forbidden.** Use `unknown` and narrow it with a schema, `typeof`, `instanceof` or `in`.
-- **External data is validated before use.** Anything coming from `JSON.parse`, `response.json()`, file contents or third-party APIs is `unknown` until it passes a zod schema.
+- **External data is validated before use.** Anything coming from `JSON.parse`, `response.json()`, file contents, `process.env` or third-party APIs is `unknown` until it passes a zod schema.
 - **Nullable values are checked, not asserted.** If something can be `null` or `undefined`, handle that case explicitly.
 - **`!` only when existence is already guaranteed** and TypeScript cannot infer it. Rewrite the code without `!` whenever possible. Otherwise, disable the lint rule on that line and explain why it is safe.
 - **No homemade type guards for external data.** A function returning `value is User` that does not fully validate is a hidden `as`; use `User.safeParse()` instead. Type guards are fine for internal unions, such as checking a discriminant field.
@@ -299,6 +299,33 @@ export const MoveError = Object.freeze({
 export type MoveError = (typeof MoveError)[keyof typeof MoveError];
 ```
 
+### Control flow
+
+Every `if`, `else`, loop and `case` uses braces, even for a single line.
+
+Why: every block looks the same, so the code is easier to scan, and adding a second line never silently changes the logic. In `switch`, braces also give each `case` its own scope, so `const` declarations in different cases do not collide.
+
+```ts
+if (!player) {
+  return;
+}
+
+switch (move.type) {
+  case MoveType.Attack: {
+    const damage = calculateDamage(move);
+    applyDamage(player, damage);
+    break;
+  }
+  case MoveType.Defend: {
+    raiseShield(player);
+    break;
+  }
+  default: {
+    break;
+  }
+}
+```
+
 ### Comments and documentation
 
 - Code should be self-explanatory. Comments explain **why** a decision was made, never **what** the code does.
@@ -330,7 +357,7 @@ Two exceptions to keep related code together and avoid runtime errors:
 
 ```ts
 import { z } from 'zod';
-import type { Logger } from 'pino';
+import type { Stats } from 'node:fs';
 
 import { Role } from './role';
 import type { Session } from './session';
@@ -344,8 +371,8 @@ export type User = z.infer<typeof User>;
 
 export const MAX_USERS_PER_PAGE = 50;
 
-export async function logSession(logger: Logger, session: Session) {
-  logger.info({ userId: session.userId }, 'Session started');
+export function describeUpload(stats: Stats, session: Session) {
+  return `${session.userId} uploaded ${stats.size} bytes`;
 }
 ```
 
@@ -397,13 +424,19 @@ export class Player {
 ## 6. Git
 
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`.
-- Large projects use prefixed branch names: `feature/<name>`, `fix/<name>`, `chore/<name>`.
 
 Full workflow in [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ---
 
-## 7. Rules for AI Assistants
+## 7. Security
+
+- Never hardcode secrets (API keys, passwords, tokens). Use environment variables.
+- Validate environment variables at startup with a zod schema, so a missing value fails immediately instead of in production later.
+
+---
+
+## 8. Rules for AI Assistants
 
 AI assistants (Claude, Copilot, ChatGPT, Gemini and others) follow every section above, plus these rules:
 
@@ -413,3 +446,29 @@ AI assistants (Claude, Copilot, ChatGPT, Gemini and others) follow every section
 4. **Minimal edits in files.** When you edit files directly, change only what the task requires. Do not rewrite, reorder or reformat unrelated code.
 5. **Follow the guidelines over the surroundings.** If existing code contradicts this document, write new code following this document and mention the inconsistency. Do not refactor the old code unless asked.
 6. **Do not invent.** Do not assume APIs, package options or versions; check the installed package or its documentation. If you lack context to complete a task safely, ask instead of guessing.
+
+---
+
+## 9. Adapting These Documents to the Project
+
+`AGENTS.md`, `CONTRIBUTING.md` and `README.md` start as templates that cover several setups. When an AI assistant initializes or sets up a project, it must trim them so they describe **only** this project.
+
+Why: rules that do not apply are noise, and they lead humans and AI to follow the wrong setup.
+
+### What to remove
+
+- **Node.js-only projects:** everything about Bun (Bun runtime, Elysia, `"types": ["bun"]`, the `bun` engine).
+- **Bun-only projects:** everything specific to Node.js (Fastify, `"types": ["node"]`, the `node` engine).
+- **No HTTP API:** the "HTTP APIs" subsection and any API examples.
+- **No environment variables:** the `.env` setup step, `.env.example`, and environment validation.
+- **Small projects:** guidance for large projects (domain folders, monorepos, branch prefixes).
+- **Anything else** that does not apply, following the same criterion.
+
+### How to do it
+
+- **Remove, do not reword.** Rules that still apply stay exactly as written.
+- **Make generic values concrete:** replace "Node.js ≥ 24 or Bun" with the runtime actually used, and the example pnpm version with the real one.
+- **Adjust examples** that use a removed technology, so they match the project's stack.
+- **Leave no dangling references:** check links, section numbers and mentions of removed content.
+- **Ask when unsure.** If it is not clear whether something applies (for example, whether an API is planned), ask the developer instead of removing it.
+- **Keep this section**, so the documents can be adapted again if the project changes.

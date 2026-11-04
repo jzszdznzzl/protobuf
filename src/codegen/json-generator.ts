@@ -110,24 +110,26 @@ function writeToJson(
       const value = toJsonExpression(field.map.value, 'v', imports, J);
       writer.block(`if (${reference}.size !== 0 || emit) {`, () => {
         writer.line(`const entries: { [key: string]: ${J}.Value } = {};`);
-        writer.line(`for (const [k, v] of ${reference}) entries[String(k)] = ${value};`);
+        writer.block(`for (const [k, v] of ${reference}) {`, () => {
+          writer.line(`entries[String(k)] = ${value};`);
+        });
         writer.line(`${target} = entries;`);
       });
     } else if (field.isRepeated) {
       const element = toJsonExpression(field.type, 'v', imports, J);
-      writer.line(
-        `if (${reference}.length !== 0 || emit) ${target} = ${reference}.map((v) => ${element});`,
-      );
+      writer.block(`if (${reference}.length !== 0 || emit) {`, () => {
+        writer.line(`${target} = ${reference}.map((v) => ${element});`);
+      });
     } else if (field.presence === Presence.Implicit) {
-      writer.line(
-        `if (emit || (${nonDefaultCheck(field.type, reference)})) ${target} = ${toJsonExpression(field.type, reference, imports, J)};`,
-      );
+      writer.block(`if (emit || (${nonDefaultCheck(field.type, reference)})) {`, () => {
+        writer.line(`${target} = ${toJsonExpression(field.type, reference, imports, J)};`);
+      });
     } else if (field.presence === Presence.Required) {
       writer.line(`${target} = ${toJsonExpression(field.type, reference, imports, J)};`);
     } else {
-      writer.line(
-        `if (${reference} != null) ${target} = ${toJsonExpression(field.type, reference, imports, J)};`,
-      );
+      writer.block(`if (${reference} != null) {`, () => {
+        writer.line(`${target} = ${toJsonExpression(field.type, reference, imports, J)};`);
+      });
     }
   }
   writer.line('return json;');
@@ -155,7 +157,7 @@ function writeReadOne(
         ? `${J}.closedEnumIn(${enumObject}, ${imports.guard(type.enum)}, ${input}, ${JSON.stringify(context)}, options)`
         : `${J}.enumIn(${enumObject}, ${input}, ${JSON.stringify(context)}, options)`;
       writer.line(`const e = ${nullable}${read};`);
-      writer.line(`if (e !== undefined) ${assign('e')};`);
+      writer.block('if (e !== undefined) {', () => writer.line(`${assign('e')};`));
       return;
     }
     case ValueKind.Scalar: {
@@ -192,7 +194,7 @@ function writeFromJsonField(
   const isNullable = field.map ? acceptsNull(field.map.value) : acceptsNull(field.type);
 
   if (!isNullable || field.isRepeated || field.map) {
-    writer.line('if (value === null) break;');
+    writer.block('if (value === null) {', () => writer.line('break;'));
   }
 
   if (field.map) {
@@ -201,7 +203,7 @@ function writeFromJsonField(
     writer.block('for (const k of Object.keys(entries)) {', () => {
       writer.line('const entry = entries[k];');
       if (!acceptsNull(value)) {
-        writer.line('if (entry === null) continue;');
+        writer.block('if (entry === null) {', () => writer.line('continue;'));
       }
       writeReadOne(
         writer,
@@ -235,9 +237,11 @@ function writeFromJsonField(
   const JsonErrorCode = imports.runtime('JsonErrorCode');
   for (const other of field.oneof?.fields ?? []) {
     if (other !== field) {
-      writer.line(
-        `if (message.${other.tsName} !== undefined) throw new ${JsonError}(${JsonErrorCode}.ConflictingOneof, ${JSON.stringify(`${field.oneof?.name ?? ''}: only one member of the oneof is allowed`)});`,
-      );
+      writer.block(`if (message.${other.tsName} !== undefined) {`, () => {
+        writer.line(
+          `throw new ${JsonError}(${JsonErrorCode}.ConflictingOneof, ${JSON.stringify(`${field.oneof?.name ?? ''}: only one member of the oneof is allowed`)});`,
+        );
+      });
     }
   }
   writeReadOne(
@@ -268,22 +272,20 @@ function writeFromJson(
     writer.block('switch (key) {', () => {
       for (const field of message.fields) {
         const names = field.jsonName === field.name ? [field.name] : [field.jsonName, field.name];
-        names.forEach((name, index) => {
-          const isLast = index === names.length - 1;
-          writer.line(`case ${JSON.stringify(name)}:${isLast ? ` { // ${field.name}` : ''}`);
-        });
-        writer.indent();
-        writeFromJsonField(writer, field, imports, J);
-        writer.line('break;');
-        writer.dedent();
-        writer.line('}');
+        for (const name of names) {
+          writer.block(`case ${JSON.stringify(name)}: { // ${field.name}`, () => {
+            writeFromJsonField(writer, field, imports, J);
+            writer.line('break;');
+          });
+        }
       }
-      writer.line('default:');
-      writer.indent();
-      writer.line(
-        `if (options?.ignoreUnknownFields !== true) throw new ${JsonError}(${JsonErrorCode}.UnknownField, \`${message.fullName}: unknown field '\${key}'\`);`,
-      );
-      writer.dedent();
+      writer.block('default: {', () => {
+        writer.block('if (options?.ignoreUnknownFields !== true) {', () => {
+          writer.line(
+            `throw new ${JsonError}(${JsonErrorCode}.UnknownField, \`${message.fullName}: unknown field '\${key}'\`);`,
+          );
+        });
+      });
     });
   });
   writer.line('return message;');

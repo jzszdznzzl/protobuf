@@ -74,7 +74,6 @@ export function generateFile(file: FileModel, options: CodegenOptions): Generate
   header.line(
     `// Source: ${file.fileName} (${file.ast.edition ? `edition ${file.ast.edition}` : file.syntax})`,
   );
-  header.line('/* eslint-disable */');
   const importLines = imports.render();
   if (importLines.length > 0) {
     header.line();

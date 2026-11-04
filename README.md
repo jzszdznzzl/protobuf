@@ -1,15 +1,43 @@
-# @jzszdznzzl/protobuf
+<div align="center">
 
-Protobuf code generator and runtime for TypeScript and JavaScript. It compiles `.proto` files
-(proto2, proto3 and editions) into plain ES modules with no dependency on `protoc`.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/jzszdznzzl/protobuf/main/assets/logo-dark.svg">
+  <img alt="protobuf" src="https://raw.githubusercontent.com/jzszdznzzl/protobuf/main/assets/logo-light.svg" width="400">
+</picture>
 
-- **ESM only**, for Node.js 24 or newer.
-- Generates **`.ts`**, or **`.js` + `.d.ts`**, from the same source.
-- **No namespaces and no `enum`**: the generated `.ts` runs directly on Node.js (type stripping).
-- **`Result` instead of exceptions** for malformed binary input and invalid JSON.
-- 64-bit integers are `bigint`.
-- Binary encoding, canonical proto3 JSON, unknown fields, extensions, groups, maps, oneofs,
-  well-known types (`Timestamp`, `Duration`, `Any`, `Struct`, ...) and service descriptors.
+**Protobuf schemas in, typed TypeScript and JavaScript out.**
+<br>
+A code generator and runtime for Node.js: no `protoc` installation required.
+
+[![npm](https://img.shields.io/npm/v/@jzszdznzzl/protobuf?color=4f46e5&label=npm)](https://www.npmjs.com/package/@jzszdznzzl/protobuf)
+[![license](https://img.shields.io/badge/license-MIT-0891b2)](./LICENSE)
+![node](https://img.shields.io/badge/node-%E2%89%A524-339933?logo=nodedotjs&logoColor=white)
+![types](https://img.shields.io/badge/types-included-3178c6?logo=typescript&logoColor=white)
+![protobuf](https://img.shields.io/badge/protobuf-proto2%20%7C%20proto3%20%7C%20editions-6750a4)
+![esm](https://img.shields.io/badge/module-ESM%20only-f7df1e)
+
+**English** · [Español](./README.es.md)
+
+</div>
+
+---
+
+## Why protobuf?
+
+Protocol Buffers let applications exchange compact, structured messages from a shared schema.
+This package turns those schemas into readable ES modules you can use directly in your Node.js
+project, whether you prefer TypeScript or JavaScript.
+
+## Features
+
+- 🧩 **One schema, two outputs.** Generate TypeScript or JavaScript with declaration files.
+- 🛠️ **No `protoc` setup.** Use the `pb` CLI or call the generator from your code.
+- 📦 **Built-in Google types.** Import bundled well-known, API and common types without an include path.
+- 🔄 **Binary and JSON.** Encode and decode protobuf wire format and use canonical protobuf JSON.
+- 🛡️ **Explicit errors.** Malformed binary input and invalid JSON return a `Result`.
+- 🧮 **Precise integers.** 64-bit integer fields use `bigint`.
+- 🧱 **Modern modules.** Generated TypeScript uses top-level declarations, without TypeScript namespaces or enums.
+- 🧰 **Protocol features.** Supports proto2, proto3, editions, maps, oneofs, extensions, groups, unknown fields and service descriptors.
 
 ## Install
 
@@ -189,6 +217,12 @@ The sources run directly on Node.js, so tests need no build step. Contributions 
 
 `pnpm update:protos` refreshes the bundled Google `.proto` files from pinned revisions.
 
-## License
+---
 
-MIT. The bundled `.proto` files keep their own licenses, see [`protos/`](./protos).
+<div align="center">
+  <a href="./LICENSE"><img src="https://raw.githubusercontent.com/jzszdznzzl/protobuf/main/assets/license-mit.svg" alt="MIT License" width="72"></a>
+  <br>
+  <strong><a href="./LICENSE">MIT License</a></strong>
+  <br>
+  © 2026 José Daniel Cristaldo Vera<br>Bundled <code>.proto</code> files retain their own licenses; see <a href="./protos/">protos/</a>.
+</div>

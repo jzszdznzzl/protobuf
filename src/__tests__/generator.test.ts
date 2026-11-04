@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { after, describe, it } from 'node:test';
 
@@ -11,6 +11,7 @@ import { ImportExtension } from '../options.ts';
 import { buildFixtures, FIXTURES_DIR, PROJECT_ROOT, RUNTIME_ENTRY } from './generated-fixtures.ts';
 
 const TSC = path.join(PROJECT_ROOT, 'node_modules', '.bin', 'tsc');
+const OXLINT = path.join(PROJECT_ROOT, 'node_modules', '.bin', 'oxlint');
 const STRICT_FLAGS = {
   moduleDetection: 'force',
   isolatedModules: true,
@@ -61,9 +62,37 @@ const contentOf = (result: GenerateResult, file: string): string => {
   return found.content;
 };
 
+const checkGeneratedControlFlow = (directory: string, extension: string): void => {
+  const files = readdirSync(directory, { recursive: true, encoding: 'utf8' }).filter((file) =>
+    file.endsWith(extension),
+  );
+  assert.ok(files.length > 0);
+
+  for (const file of files) {
+    const content = readFileSync(path.join(directory, file), 'utf8');
+    assert.doesNotMatch(content, /(?:eslint|oxlint)-disable/);
+    for (const line of content.split('\n')) {
+      if (/^\s*(?:case\s+.+|default):/.test(line)) {
+        assert.match(line, /:\s*\{/, `${file}: ${line}`);
+      }
+    }
+  }
+
+  const run = spawnSync(
+    OXLINT,
+    ['--config', path.join(PROJECT_ROOT, '.oxlintrc.json'), '--no-ignore', directory],
+    { encoding: 'utf8' },
+  );
+  assert.equal(run.status, 0, `${run.stdout}${run.stderr}`);
+};
+
 describe('generated TypeScript', () => {
   it('passes the strictest compiler settings', () => {
     assert.equal(typecheck(fixtures.root, ['ts'], false), '');
+  });
+
+  it('uses braces for control flow and passes the project lint rules', () => {
+    checkGeneratedControlFlow(fixtures.tsDir, '.ts');
   });
 
   it('is accepted as ESM by Node and has no namespaces or enums', () => {
@@ -76,6 +105,9 @@ describe('generated TypeScript', () => {
 });
 
 describe('generated JavaScript and declarations', () => {
+  it('uses braces for control flow and passes the project lint rules', () => {
+    checkGeneratedControlFlow(fixtures.jsDir, '.js');
+  });
   it('has declarations that a consumer can compile against', () => {
     const consumer = path.join(fixtures.root, 'consumer.ts');
     writeFileSync(

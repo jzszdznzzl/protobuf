@@ -44,11 +44,9 @@ export function generateEnum(writer: CodeWriter, model: EnumModel, options: Code
     writer.block(`export function ${model.guardName}(value: number): value is ${tsName} {`, () => {
       writer.block('switch (value) {', () => {
         for (const number of numbers) {
-          writer.line(`case ${number}:`);
+          writer.block(`case ${number}: {`, () => writer.line('return true;'));
         }
-        writer.indent().line('return true;').dedent();
-        writer.line('default:');
-        writer.indent().line('return false;').dedent();
+        writer.block('default: {', () => writer.line('return false;'));
       });
     });
   }

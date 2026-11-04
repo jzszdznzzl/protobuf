@@ -29,10 +29,7 @@ pnpm install
 
 ## Workflow
 
-1. **Create a branch** from the default branch:
-   - `feature/<short-name>` for new functionality
-   - `fix/<short-name>` for bug fixes
-   - `chore/<short-name>` for maintenance
+1. **Create a branch** from the default branch.
 2. **Commit** following [Conventional Commits](https://www.conventionalcommits.org/):
    - `feat: add user search`
    - `fix(api): handle empty query`

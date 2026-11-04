@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="160" viewBox="0 0 520 160" role="img" aria-label="protobuf">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4F46E5"/>
+      <stop offset="1" stop-color="#0891B2"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(16 16)">
+    <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+    <path d="M43 33 27 64l16 31M85 33l16 31-16 31" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="50" y="39" width="30" height="7" rx="3.5" fill="#fff" opacity=".65"/>
+    <rect x="50" y="60" width="22" height="7" rx="3.5" fill="#fff" opacity=".65"/>
+    <rect x="50" y="81" width="30" height="7" rx="3.5" fill="#FDE68A"/>
+    <circle cx="82" cy="63.5" r="4" fill="#FDE68A"/>
+  </g>
+  <text x="170" y="103" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="61" font-weight="800" letter-spacing="-2" fill="#F8FAFC">proto<tspan fill="#A5B4FC">buf</tspan></text>
+</svg>

@@ -62,7 +62,9 @@ function encodeField(
     if (field.isPacked) {
       writer.block(`if (${reference} != null && ${reference}.length !== 0) {`, () => {
         writer.line(`writer.uint32(${makeTag(field.number, WireType.LengthDelimited)}).fork();`);
-        writer.line(`for (const v of ${reference}) writer.${codecMethod(field.type)}(v);`);
+        writer.block(`for (const v of ${reference}) {`, () => {
+          writer.line(`writer.${codecMethod(field.type)}(v);`);
+        });
         writer.line('writer.ldelim();');
       });
     } else {
@@ -76,9 +78,11 @@ function encodeField(
   }
 
   if (field.presence === Presence.Required) {
-    writer.line(
-      `if (${reference} == null) throw new Error(${JSON.stringify(`${owner.fullName}: missing required field '${field.name}'`)});`,
-    );
+    writer.block(`if (${reference} == null) {`, () => {
+      writer.line(
+        `throw new Error(${JSON.stringify(`${owner.fullName}: missing required field '${field.name}'`)});`,
+      );
+    });
     writeValue(writer, field.type, field.number, reference, field.isGroup, imports);
     return;
   }
@@ -148,9 +152,11 @@ export function generateEncode(
         encodeField(writer, message, field, imports);
       }
       if (hasUnknown(message, options)) {
-        writer.line(
-          'if (message.$unknown != null) for (const chunk of message.$unknown) writer.raw(chunk);',
-        );
+        writer.block('if (message.$unknown != null) {', () => {
+          writer.block('for (const chunk of message.$unknown) {', () =>
+            writer.line('writer.raw(chunk);'),
+          );
+        });
       }
       writer.line('return writer;');
     },

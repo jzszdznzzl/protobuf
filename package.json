@@ -1,6 +1,6 @@
 {
   "name": "@jzszdznzzl/protobuf",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Protobuf (proto2, proto3, editions) to TypeScript/JavaScript code generator and runtime, usable as a library or CLI",
   "license": "MIT",
   "type": "module",

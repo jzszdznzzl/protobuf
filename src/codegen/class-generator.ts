@@ -111,15 +111,17 @@ function generateConstructor(
       writer.line('void init;');
       return;
     }
-    writer.line('if (!init) return;');
+    writer.block('if (!init) {', () => writer.line('return;'));
     for (const field of message.fields) {
       const source = `init.${field.tsName}`;
-      writer.line(
-        `if (${source} != null) this.${field.tsName} = ${copyExpression(field, source, types, imports)};`,
-      );
+      writer.block(`if (${source} != null) {`, () => {
+        writer.line(`this.${field.tsName} = ${copyExpression(field, source, types, imports)};`);
+      });
     }
     if (isKeepingUnknown) {
-      writer.line('if (init.$unknown != null) this.$unknown = init.$unknown.slice();');
+      writer.block('if (init.$unknown != null) {', () => {
+        writer.line('this.$unknown = init.$unknown.slice();');
+      });
     }
   });
 }
@@ -141,9 +143,9 @@ function generateOneOfGetters(
     );
     writer.block(`get ${oneOf.tsName}(): ${union} | undefined {`, () => {
       for (const field of oneOf.fields) {
-        writer.line(
-          `if (this.${field.tsName} !== undefined) return ${JSON.stringify(field.tsName)};`,
-        );
+        writer.block(`if (this.${field.tsName} !== undefined) {`, () => {
+          writer.line(`return ${JSON.stringify(field.tsName)};`);
+        });
       }
       writer.line('return undefined;');
     });

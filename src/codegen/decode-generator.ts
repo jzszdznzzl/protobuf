@@ -76,9 +76,10 @@ function pushOrUnknown(
   unknown: string,
 ): void {
   const check = `${context.imports.guard(type)}(v)`;
-  writer.line(
-    context.isKeepingUnknown ? `if (${check}) ${push}; else ${unknown}` : `if (${check}) ${push};`,
-  );
+  writer.block(`if (${check}) {`, () => writer.line(`${push};`));
+  if (context.isKeepingUnknown) {
+    writer.block('else {', () => writer.line(unknown));
+  }
 }
 
 function decodeRepeatedCase(writer: CodeWriter, field: FieldModel, context: DecodeContext): void {
@@ -104,8 +105,10 @@ function decodeRepeatedCase(writer: CodeWriter, field: FieldModel, context: Deco
       writer.line('break;');
     });
   } else {
-    writer.line(`case ${tag}:${comment}`);
-    writer.indent().line(`${reference}.push(${read});`).line('break;').dedent();
+    writer.block(`case ${tag}: {${comment}`, () => {
+      writer.line(`${reference}.push(${read});`);
+      writer.line('break;');
+    });
   }
   if (!isPackable) {
     return;
@@ -126,7 +129,9 @@ function decodeRepeatedCase(writer: CodeWriter, field: FieldModel, context: Deco
           );
         });
       } else {
-        writer.line(`while (reader.pos < end2) ${reference}.push(${read});`);
+        writer.block('while (reader.pos < end2) {', () => {
+          writer.line(`${reference}.push(${read});`);
+        });
       }
       writer.line('reader.checkEnd(end2);');
       writer.line('break;');
@@ -162,22 +167,17 @@ function decodeMapCase(writer: CodeWriter, field: FieldModel, context: DecodeCon
       writer.block('while (reader.pos < end2) {', () => {
         writer.line('const tag2 = reader.uint32();');
         writer.block('switch (tag2) {', () => {
-          writer.line(`case ${keyTag}:`);
-          writer
-            .indent()
-            .line(`key = ${readScalar(map.key, field.shouldVerifyUtf8)};`)
-            .line('break;')
-            .dedent();
-          writer.line(`case ${valueTag}:`);
-          writer
-            .indent()
-            .line(
+          writer.block(`case ${keyTag}: {`, () => {
+            writer.line(`key = ${readScalar(map.key, field.shouldVerifyUtf8)};`);
+            writer.line('break;');
+          });
+          writer.block(`case ${valueTag}: {`, () => {
+            writer.line(
               `value = ${readExpression(map.value, 2, false, field.shouldVerifyUtf8, context)};`,
-            )
-            .line('break;')
-            .dedent();
-          writer.line('default:');
-          writer.indent().line('reader.skipField(tag2);').dedent();
+            );
+            writer.line('break;');
+          });
+          writer.block('default: {', () => writer.line('reader.skipField(tag2);'));
         });
       });
       writer.line('reader.checkEnd(end2);');
@@ -186,7 +186,8 @@ function decodeMapCase(writer: CodeWriter, field: FieldModel, context: DecodeCon
       if (closed) {
         const check = `${context.imports.guard(closed)}(value)`;
         if (context.isKeepingUnknown) {
-          writer.block(`if (${check}) {`, () => writer.line(set), `} else ${unknownPush()}`);
+          writer.block(`if (${check}) {`, () => writer.line(set), '} else {');
+          writer.indent().line(unknownPush()).dedent().line('}');
         } else {
           writer.block(`if (${check}) {`, () => writer.line(set));
         }
@@ -241,7 +242,8 @@ function decodeSingularCase(
       writer.line(`const v = ${read};`);
       const check = `${context.imports.guard(closed)}(v)`;
       if (context.isKeepingUnknown) {
-        writer.block(`if (${check}) {`, assign, `} else ${unknownPush()}`);
+        writer.block(`if (${check}) {`, assign, '} else {');
+        writer.indent().line(unknownPush()).dedent().line('}');
       } else {
         writer.block(`if (${check}) {`, assign);
       }
@@ -250,11 +252,10 @@ function decodeSingularCase(
     return;
   }
 
-  writer.line(`case ${tag}:${comment}`);
-  writer.indent();
-  assign();
-  writer.line('break;');
-  writer.dedent();
+  writer.block(`case ${tag}: {${comment}`, () => {
+    assign();
+    writer.line('break;');
+  });
 }
 
 function decodeFieldCases(
@@ -359,12 +360,12 @@ export function generateDecode(
             const index = required.indexOf(field);
             decodeFieldCases(writer, field, context, index >= 0 ? `seen${index}` : undefined);
           }
-          writer.line('default:');
-          writer.indent().line('reader.skipField(tag);');
-          if (context.isKeepingUnknown) {
-            writer.line(unknownPush());
-          }
-          writer.dedent();
+          writer.block('default: {', () => {
+            writer.line('reader.skipField(tag);');
+            if (context.isKeepingUnknown) {
+              writer.line(unknownPush());
+            }
+          });
         });
       });
 
@@ -374,14 +375,19 @@ export function generateDecode(
         return `throw new ${DecodeError}(${DecodeErrorCode}.${code}, ${JSON.stringify(text)});`;
       };
       if (isDelimited) {
-        writer.line(
-          `if (!isEnded) ${fail('UnterminatedGroup', `${message.fullName}: unterminated group`)}`,
-        );
+        writer.block('if (!isEnded) {', () => {
+          writer.line(fail('UnterminatedGroup', `${message.fullName}: unterminated group`));
+        });
       }
       required.forEach((field, index) => {
-        writer.line(
-          `if (!seen${index}) ${fail('MissingRequiredField', `${message.fullName}: missing required field '${field.name}'`)}`,
-        );
+        writer.block(`if (!seen${index}) {`, () => {
+          writer.line(
+            fail(
+              'MissingRequiredField',
+              `${message.fullName}: missing required field '${field.name}'`,
+            ),
+          );
+        });
       });
       writer.line('return message;');
     },
