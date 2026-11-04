@@ -44,7 +44,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/node": "24",
+    "@types/node": "26",
     "oxlint": "1.90.0",
     "prettier": "3.9.10",
     "tsdown": "0.23.4",
